@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sangha-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sangha
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - sangha-pgdata:/var/lib/postgresql/data
+      # 仅首次初始化（数据卷为空）时自动执行建表与种子脚本
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sangha"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  sangha-pgdata:
