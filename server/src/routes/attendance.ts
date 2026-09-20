@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { many, one, ApiError, asEnum } from '../db.js';
+import { pool, many, one, ApiError, asEnum } from '../db.js';
 
 const SESSIONS = ['morning', 'evening'] as const;
 const ATT_STATUSES = ['present', 'absent', 'leave'] as const;
@@ -67,6 +67,10 @@ const routes: FastifyPluginAsync = async (app) => {
       status?: 'present' | 'absent' | 'leave'; note?: string | null; recorded_by?: string | null;
     };
     if (!monk_id || !attend_date || !session || !status) throw new ApiError(400, '登记信息不完整');
+    const m = await one<{ status: string } | null>('SELECT status FROM monks WHERE id=$1', [monk_id]);
+    if (!m) throw new ApiError(404, '僧人不存在');
+    // 法会临时人员不进入原有考勤体系（亦不产生缺勤告警/考察统计）
+    if (m.status === 'ceremony') throw new ApiError(400, '法会临时人员不登记常规早晚课考勤');
     const sess = asEnum(session, SESSIONS, '课次');
     const st = asEnum(status, ATT_STATUSES, '考勤状态');
     const row = await one(`
@@ -86,9 +90,16 @@ const routes: FastifyPluginAsync = async (app) => {
       throw new ApiError(400, '登记信息不完整');
     }
     const sess = asEnum(body.session, SESSIONS, '课次');
+    // 法会临时人员不进入原有考勤体系，批量登记时剔除
+    const { rows: tmpRows } = await pool.query(
+      `SELECT id FROM unnest($1::uuid[]) AS id
+        WHERE id IN (SELECT id FROM monks WHERE status='ceremony')`,
+      [body.entries.map((e) => e.monk_id)],
+    );
+    const ceremonyIds = new Set(tmpRows.map((r: { id: string }) => r.id));
     let upserted = 0;
     for (const e of body.entries) {
-      if (!e.monk_id || !e.status) continue;
+      if (!e.monk_id || !e.status || ceremonyIds.has(e.monk_id)) continue;
       const st = asEnum(e.status, ATT_STATUSES, '考勤状态');
       await one(`
         INSERT INTO attendance (monk_id, attend_date, session, status, note, recorded_by)

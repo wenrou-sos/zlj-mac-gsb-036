@@ -76,6 +76,15 @@ const routes: FastifyPluginAsync = async (app) => {
         );
         if (beds.length === 0) throw new ApiError(400, '所选床位不存在');
         if (beds[0].monk_id) throw new ApiError(409, '该床位已有人入住');
+        // 法会临时床位按日期区间占用，防止常住/挂单安排与法会撞期
+        const clash = await client.query(
+          `SELECT 1 FROM ceremony_bed_assignments a
+            WHERE a.bed_id=$1 AND a.status='active'
+              AND a.stay_range && daterange($2::date, $2::date + $3::int)
+            LIMIT 1`,
+          [body.bed_id, body.arrive_date, body.expected_days],
+        );
+        if (clash.rows[0]) throw new ApiError(409, '该床位在所选到离寺时段已预留给法会临时人员');
       }
 
       const { rows } = await client.query(
@@ -101,8 +110,8 @@ const routes: FastifyPluginAsync = async (app) => {
   // 安排/调换床位
   app.put<{ Params: { id: string } }>('/:id/bed', async (req) => {
     const { bed_id } = req.body as { bed_id: string };
-    const g = await one<{ bed_id: string | null; monk_id: string } | null>(
-      'SELECT bed_id, monk_id FROM guadan WHERE id=$1 AND status=\'active\'',
+    const g = await one<{ bed_id: string | null; monk_id: string; arrive_date: string; expected_days: number } | null>(
+      `SELECT bed_id, monk_id, arrive_date, expected_days FROM guadan WHERE id=$1 AND status='active'`,
       [req.params.id],
     );
     if (!g) throw new ApiError(404, '有效挂单记录不存在');
@@ -113,6 +122,15 @@ const routes: FastifyPluginAsync = async (app) => {
       const { rows } = await client.query('SELECT monk_id FROM beds WHERE id=$1 FOR UPDATE', [bed_id]);
       if (rows.length === 0) throw new ApiError(400, '床位不存在');
       if (rows[0].monk_id && rows[0].monk_id !== g.monk_id) throw new ApiError(409, '该床位已有人入住');
+      // 法会临时床位按日期区间占用，调换时同样校验撞期
+      const clash = await client.query(
+        `SELECT 1 FROM ceremony_bed_assignments a
+          WHERE a.bed_id=$1 AND a.status='active'
+            AND a.stay_range && daterange($2::date, $2::date + $3::int)
+          LIMIT 1`,
+        [bed_id, g.arrive_date, g.expected_days],
+      );
+      if (clash.rows[0]) throw new ApiError(409, '该床位在该僧人到离寺时段已预留给法会临时人员');
 
       if (g.bed_id) await client.query('UPDATE beds SET monk_id=NULL WHERE id=$1', [g.bed_id]);
       await client.query('UPDATE beds SET monk_id=$1 WHERE id=$2', [g.monk_id, bed_id]);

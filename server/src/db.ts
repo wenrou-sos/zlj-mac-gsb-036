@@ -48,10 +48,21 @@ export function asEnum<T extends string>(value: unknown, allowed: readonly T[], 
   throw new ApiError(400, `无效的${label}：${String(value)}`);
 }
 
-export const MONK_STATUSES = ['guadan', 'inspection', 'permanent', 'left'] as const;
+export const MONK_STATUSES = ['guadan', 'inspection', 'permanent', 'left', 'ceremony'] as const;
 export const GUADAN_STATUSES = ['active', 'closed'] as const;
 export const INSPECTION_RESULTS = ['pending', 'passed', 'failed'] as const;
 export const ALERT_STATUSES = ['open', 'acknowledged'] as const;
 export const ROUND_STATUSES = ['collecting', 'summarized'] as const;
 export const SUBMISSION_TYPES = ['normal', 'makeup'] as const;
 export const REVIEW_CONCLUSIONS = ['excellent', 'qualified', 'unqualified'] as const;
+export const CEREMONY_STATUSES = ['preparing', 'active', 'closed'] as const;
+export const PARTICIPANT_STATUSES = [
+  'registered', 'waitlisted', 'proposed', 'checked_in',
+  'late', 'no_show', 'early_left', 'left', 'cancelled',
+] as const;
+export type ParticipantStatus = (typeof PARTICIPANT_STATUSES)[number];
+
+// 占用接待名额的人员状态（候补/取消/未到不计）
+export const ADMITTED_STATUSES = [
+  'registered', 'proposed', 'checked_in', 'late', 'early_left', 'left',
+] as const;

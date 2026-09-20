@@ -5,6 +5,8 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'dashboard', component: () => import('./pages/DashboardPage.vue'), meta: { title: '客堂总览' } },
     { path: '/guadan', name: 'guadan', component: () => import('./pages/GuadanPage.vue'), meta: { title: '挂单登记' } },
+    { path: '/ceremonies', name: 'ceremonies', component: () => import('./pages/ceremony/CeremoniesPage.vue'), meta: { title: '大型法会' } },
+    { path: '/ceremonies/:id', name: 'ceremony-detail', component: () => import('./pages/ceremony/CeremonyDetailPage.vue'), meta: { title: '法会客堂' } },
     { path: '/rooms', name: 'rooms', component: () => import('./pages/RoomsPage.vue'), meta: { title: '寮房床位' } },
     { path: '/inspections', name: 'inspections', component: () => import('./pages/InspectionsPage.vue'), meta: { title: '考察与常住' } },
     { path: '/permanent', name: 'permanent', component: () => import('./pages/PermanentPage.vue'), meta: { title: '常住档案' } },

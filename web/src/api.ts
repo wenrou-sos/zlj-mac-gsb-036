@@ -69,3 +69,39 @@ export const CONCLUSION_TYPE: Record<string, 'success' | 'warning' | 'error'> = 
   qualified: 'warning',
   unqualified: 'error',
 };
+
+export const CEREMONY_STATUS_LABEL: Record<string, string> = {
+  preparing: '筹备中',
+  active: '进行中',
+  closed: '已圆满',
+};
+
+export const CEREMONY_STATUS_TYPE: Record<string, 'default' | 'success' | 'info'> = {
+  preparing: 'default',
+  active: 'success',
+  closed: 'info',
+};
+
+export const PARTICIPANT_STATUS_LABEL: Record<string, string> = {
+  registered: '已登记',
+  waitlisted: '候补中',
+  proposed: '待确认',
+  checked_in: '已签到',
+  late: '迟到',
+  no_show: '未到',
+  early_left: '提前离寺',
+  left: '已离寺',
+  cancelled: '已取消',
+};
+
+export const PARTICIPANT_STATUS_TYPE: Record<string, 'default' | 'info' | 'success' | 'warning' | 'error'> = {
+  registered: 'info',
+  waitlisted: 'warning',
+  proposed: 'warning',
+  checked_in: 'success',
+  late: 'warning',
+  no_show: 'error',
+  early_left: 'default',
+  left: 'default',
+  cancelled: 'default',
+};

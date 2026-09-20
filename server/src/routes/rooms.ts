@@ -25,13 +25,23 @@ const routes: FastifyPluginAsync = async (app) => {
     }));
   });
 
-  // 空闲床位（挂单安排床位用）
-  app.get('/available-beds', async () => many(`
-    SELECT b.id, b.bed_no, r.id AS room_id, r.room_no
-    FROM beds b JOIN rooms r ON r.id = b.room_id
-    WHERE b.monk_id IS NULL
-    ORDER BY r.room_no, b.bed_no
-  `));
+  // 空闲床位（挂单安排床位用）；可按到寺日期+预计天数排除法会预留
+  app.get('/available-beds', async (req) => {
+    const { arrive_date, days } = req.query as { arrive_date?: string; days?: string };
+    const arrive = arrive_date ?? new Date().toISOString().slice(0, 10);
+    const n = Math.max(1, Math.min(Number(days ?? 30) || 30, 365));
+    return many(`
+      SELECT b.id, b.bed_no, r.id AS room_id, r.room_no
+      FROM beds b JOIN rooms r ON r.id = b.room_id
+      WHERE b.monk_id IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM ceremony_bed_assignments a
+           WHERE a.bed_id = b.id AND a.status='active'
+             AND a.stay_range && daterange($1::date, $1::date + $2::int)
+        )
+      ORDER BY r.room_no, b.bed_no
+    `, [arrive, n]);
+  });
 
   app.post('/', async (req, reply) => {
     const { room_no, capacity, note } = req.body as {

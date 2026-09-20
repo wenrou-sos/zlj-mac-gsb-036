@@ -59,7 +59,7 @@ import {
 import type { MenuOption } from 'naive-ui';
 import {
   HomeOutline, DocumentTextOutline, BedOutline, TimerOutline, PeopleOutline,
-  CalendarNumberOutline, NotificationsOutline,
+  CalendarNumberOutline, NotificationsOutline, FlameOutline,
 } from '@vicons/ionicons5';
 import { http } from './api.js';
 
@@ -89,6 +89,7 @@ const icon = (component: Component) => () => h(NIcon, null, { default: () => h(c
 const menuOptions = computed<MenuOption[]>(() => [
   { label: '客堂总览', key: '/', icon: icon(HomeOutline) },
   { label: '挂单登记', key: '/guadan', icon: icon(DocumentTextOutline) },
+  { label: '大型法会', key: '/ceremonies', icon: icon(FlameOutline) },
   { label: '寮房床位', key: '/rooms', icon: icon(BedOutline) },
   { label: '考察与常住', key: '/inspections', icon: icon(TimerOutline) },
   { label: '常住档案', key: '/permanent', icon: icon(PeopleOutline) },
@@ -106,7 +107,11 @@ const menuOptions = computed<MenuOption[]>(() => [
   },
 ]);
 
-const activeKey = computed(() => route.path);
+const activeKey = computed(() => {
+  const path = route.path;
+  if (path.startsWith('/ceremonies')) return '/ceremonies';
+  return path;
+});
 const currentTitle = computed(() => (route.meta.title as string) ?? '');
 
 function go(key: string) {

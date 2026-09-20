@@ -270,3 +270,95 @@ export interface Dashboard {
   bed_usage: { total: number; occupied: number };
   today: string;
 }
+
+// ---------------- 大型法会 ----------------
+export type CeremonyStatus = 'preparing' | 'active' | 'closed';
+export type ParticipantStatus =
+  | 'registered' | 'waitlisted' | 'proposed'
+  | 'checked_in' | 'late' | 'no_show' | 'early_left' | 'left' | 'cancelled';
+
+export interface Ceremony {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  daily_capacity: number;
+  note: string | null;
+  status: CeremonyStatus;
+  closed_at: string | null;
+  final_stats: CeremonyStats | null;
+  created_at: string;
+  updated_at: string;
+  admitted_count?: number;
+  waitlist_count?: number;
+  checkedin_count?: number;
+}
+
+export interface Participant {
+  id: string;
+  ceremony_id: string;
+  monk_id: string | null;
+  dharma_name: string;
+  home_monastery: string | null;
+  ordination_no: string | null;
+  group_key: string;
+  arrive_date: string;
+  leave_date: string;
+  actual_leave_date: string | null;
+  special_need: string | null;
+  status: ParticipantStatus;
+  checkin_at: string | null;
+  note: string | null;
+  room_no: string | null;
+  bed_no: string | null;
+}
+
+export interface ImportResultRow {
+  line_no: number;
+  dharma_name: string;
+  ordination_no: string | null;
+  arrive_date: string;
+  leave_date: string;
+  participant_id?: string;
+  result: 'ok' | 'waitlisted' | 'error';
+  code?: 'duplicate' | 'conflict' | 'capacity' | 'invalid';
+  message: string;
+}
+
+export interface ImportResponse {
+  batch_no: number;
+  total: number;
+  imported: number;
+  waitlisted: number;
+  errors: number;
+  results: ImportResultRow[];
+}
+
+export interface CeremonyStats {
+  admitted: number;
+  arrived: number;
+  no_show: number;
+  waitlisted: number;
+  arrival_rate: number;
+  bed_peak: number;
+  daily: { day: string; present: number; admitted: number; beds_used: number }[];
+}
+
+export interface CeremonyLog {
+  id: string;
+  ceremony_id: string;
+  participant_id: string | null;
+  batch_no: number | null;
+  action: string;
+  detail: Record<string, unknown>;
+  operator: string;
+  created_at: string;
+  dharma_name: string | null;
+}
+
+export interface CeremonyBed {
+  bed_id: string;
+  bed_no: string;
+  room_id: string;
+  room_no: string;
+}

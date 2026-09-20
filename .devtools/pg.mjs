@@ -44,6 +44,7 @@ if (!rows[0].t) {
   console.log('[devpg] 首次启动，执行建表与种子脚本...');
   await client.query(readFileSync(join(ROOT, 'db/init/01_schema.sql'), 'utf8'));
   await client.query(readFileSync(join(ROOT, 'db/init/02_seed.sql'), 'utf8'));
+  await client.query(readFileSync(join(ROOT, 'db/init/03_ceremony.sql'), 'utf8'));
   console.log('[devpg] 初始化完成');
 } else {
   console.log('[devpg] 数据目录已存在，跳过初始化');
