@@ -40,6 +40,21 @@ export class ApiError extends Error {
   }
 }
 
+// 把 pg 约束/排他冲突转换为 ApiError（409），其余原样抛出
+export function pgConflict(e: unknown): ApiError | null {
+  const err = e as { code?: string; constraint?: string; message?: string };
+  if (err?.code === '23514' || err?.constraint === 'ceremony_capacity') {
+    return new ApiError(409, err.message ?? '接待容量约束不满足');
+  }
+  if (err?.code === '23505') {
+    return new ApiError(409, err.message ?? '数据唯一性冲突');
+  }
+  if (err?.code === '23P01') {
+    return new ApiError(409, err.message ?? '资源区间冲突（排他约束）');
+  }
+  return null;
+}
+
 // 枚举参数白名单校验，避免非法值导致 500
 export function asEnum<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
   if (typeof value === 'string' && (allowed as readonly string[]).includes(value)) {

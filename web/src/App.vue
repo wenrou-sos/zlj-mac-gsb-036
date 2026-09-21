@@ -59,7 +59,7 @@ import {
 import type { MenuOption } from 'naive-ui';
 import {
   HomeOutline, DocumentTextOutline, BedOutline, TimerOutline, PeopleOutline,
-  CalendarNumberOutline, NotificationsOutline,
+  CalendarNumberOutline, NotificationsOutline, FlameOutline,
 } from '@vicons/ionicons5';
 import { http } from './api.js';
 
@@ -93,6 +93,7 @@ const menuOptions = computed<MenuOption[]>(() => [
   { label: '考察与常住', key: '/inspections', icon: icon(TimerOutline) },
   { label: '常住档案', key: '/permanent', icon: icon(PeopleOutline) },
   { label: '早晚课考勤', key: '/attendance', icon: icon(CalendarNumberOutline) },
+  { label: '大型法会', key: '/ceremonies', icon: icon(FlameOutline) },
   {
     label: () =>
       h('span', { style: 'display:flex;align-items:center;gap:8px;' }, [

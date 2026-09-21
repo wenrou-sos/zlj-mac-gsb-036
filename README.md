@@ -17,16 +17,19 @@
 | 常住档案 | 法名、字辈、剃度师、受戒时间与戒场、担任职务（知客/维那/典座等） |
 | 早晚课考勤 | 早课/晚课按日整堂登记（随众/缺勤/请假），支持按僧人区间查询 |
 | 缺勤提醒 | **近 30 日缺勤累计满 3 次，数据库触发器自动生成客堂待办**，知客知悉后归档 |
+| 大型法会 | 启建法会（日期/接待上限）、表格批量导入临时僧众并逐行反馈重复·撞期·容量错误；按到离寺时间与特殊需求分组、自动分配临时床位（与现有入住/日期重叠/并发抢占事务校验）；满员进候补 FIFO，床位释放自动递补、知客确认；批量签到（自动判迟到）、未到、提前离寺；结束批量释放床位并统计实到率、床位峰值与每日入住趋势；临时人员**不进入原有考勤告警与考察统计**，导入/调床/递补/签到全程留痕 |
 
 ## 目录结构
 
 ```
 .
-├── db/init/            # PostgreSQL 建表(01)与演示数据(02)
+├── db/init/            # PostgreSQL 建表(01)、演示数据(02)、法会模块(03)
 ├── server/             # Fastify + TS API
-│   └── src/routes/     # monks / guadan / rooms / inspections / attendance / alerts / dashboard
+│   └── src/routes/     # monks / guadan / rooms / inspections / attendance / alerts
+│                       #   / dashboard / ceremonies
+│   └── src/__tests__/  # node:test 关键事务测试（容量/抢床/候补/签到/隔离）
 ├── web/                # Vue3 + TS + Naive UI
-│   └── src/pages/      # 七个业务页面
+│   └── src/pages/      # 七个业务页面 + ceremony/ 法会模块
 └── docker-compose.yml  # 一键启动 PostgreSQL
 ```
 
@@ -60,6 +63,9 @@ node pg.mjs            # 启动并在首次运行时建库建表+种子数据
 
 > 重新演示初始数据：停掉数据库后删除 `.devtools/pgdata`，再 `node pg.mjs`；
 > Docker 方式则 `docker compose down -v` 后重新 `up`。
+>
+> 已在运行的旧库新增法会模块：手动执行一次 `db/init/03_ceremony.sql`
+> （`psql -f db/init/03_ceremony.sql` 或 `.devtools` 连接后 `\i`）。
 
 ## 账号 / 环境
 
@@ -117,3 +123,41 @@ PGHOST=localhost  PGPORT=5432  PGDATABASE=sangha  PGUSER=postgres  PGPASSWORD=po
 | GET | `/api/attendance/summary` | 区间缺勤统计 |
 | GET/POST | `/api/alerts` | 缺勤提醒 / 知悉 |
 | GET | `/api/dashboard` | 客堂总览 |
+
+### 大型法会临时僧众（`/api/ceremonies`）
+
+| Method | Path | 说明 |
+| --- | --- | --- |
+| GET/POST | `/api/ceremonies` | 法会列表 / 启建（名称、起止日期、接待上限） |
+| GET/PUT | `/api/ceremonies/:id` | 法会详情（分项计数）/ 修改（仅备会期，上限不低于已排峰值） |
+| POST | `/api/ceremonies/:id/action/:action` | `start` 开始 / `close` 圆满 |
+| POST | `/api/ceremonies/:id/import` | 表格批量导入，**逐行**反馈 accepted/waitlisted/duplicate/conflict/invalid，批次完整留档 |
+| POST | `/api/ceremonies/:id/participants` | 手工新增单人 |
+| GET | `/api/ceremonies/:id/participants` | 接待名册（可按状态/分组过滤，含床位与签到） |
+| GET | `/api/ceremonies/:id/waitlist` | 候补 FIFO 队列 |
+| GET | `/api/ceremonies/:id/available-beds` | 区间内可用临时床位（排除现有入住与区间重叠） |
+| POST | `/api/ceremonies/:id/allocate-beds` | 按分组/到离/特殊需求自动分床（病弱优先下铺） |
+| PUT | `/api/ceremonies/:id/participants/:pid/bed` | 指定/调换床位（事务内复核现有入住与日期重叠） |
+| POST | `.../:pid/offer/confirm` · `/offer/reject` | 知客确认递补床位 / 谢绝（回候补队尾，床位继续递补） |
+| POST | `.../:pid/release-bed` · `/cancel` | 手动释床（自动递补）/ 取消登记 |
+| POST | `/api/ceremonies/:id/checkin` | 批量签到（晚于到寺日自动记迟到；held 床位随到随确认） |
+| POST | `/api/ceremonies/:id/no-show` | 批量标记未到（释床并自动递补） |
+| POST | `/api/ceremonies/:id/early-leave` · `/checkout` | 批量提前离寺 / 正常离寺（释床并自动递补） |
+| POST | `/api/ceremonies/:id/release-all` | 圆满结束批量释放全部床位 |
+| GET | `/api/ceremonies/:id/reports` | 实到率、床位峰值及日期、每日入住趋势、状态分布 |
+| GET | `/api/ceremonies/:id/events` | 操作留痕（导入/分床/调床/递补/签到/离寺） |
+| GET | `/api/ceremonies/:id/import-batches[/:bid]` | 导入批次列表 / 某批逐行结果 |
+
+关键约束（`db/init/03_ceremony.sql`）：
+
+- **接待上限**：触发器按日计数，超过 `capacity` 拒绝（法会行 `FOR UPDATE` 串行化名额竞争）；
+- **床位防重叠/抢占**：`ceremony_bed_stays` 上 `btree_gist` 排他约束
+  `EXCLUDE USING gist (bed_id WITH =, daterange(stay_start,stay_end,'[]') WITH &&)`，
+  配合 `SELECT … FOR UPDATE` 与应用层区间校验，杜绝现有入住、日期重叠与并发抢占；
+- **系统隔离**：临时人员存于独立 `ceremony_participants` 表，不写入 `monks`，
+  因而不进入早晚课考勤、缺勤提醒触发器与考察期统计；
+- **历史保留**：床位 `released` 行、签到表、导入批次、事件日志只增不改，支撑结束后峰值/趋势回溯。
+
+```bash
+cd server && npm test     # node:test 关键事务测试（需 PostgreSQL 运行）
+```

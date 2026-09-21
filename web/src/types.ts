@@ -270,3 +270,119 @@ export interface Dashboard {
   bed_usage: { total: number; occupied: number };
   today: string;
 }
+
+// ---------------- 大型法会临时僧众 ----------------
+export type CeremonyStatus = 'preparing' | 'ongoing' | 'closed';
+export type ParticipantStatus =
+  | 'registered' | 'waitlisted' | 'bed_offered' | 'confirmed'
+  | 'checked_in' | 'early_left' | 'checked_out' | 'no_show' | 'cancelled';
+
+export interface Ceremony {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  capacity: number;
+  status: CeremonyStatus;
+  note: string | null;
+  closed_at: string | null;
+  created_by: string;
+  active_count?: number;
+  waitlist_count?: number;
+  checked_in_count?: number;
+  registered_count?: number;
+  offered_count?: number;
+  confirmed_count?: number;
+  early_left_count?: number;
+  no_show_count?: number;
+  cancelled_count?: number;
+  bed_held?: number;
+}
+
+export interface CeremonyParticipant {
+  id: string;
+  ceremony_id: string;
+  dharma_name: string;
+  home_monastery: string | null;
+  ordination_no: string | null;
+  contact: string | null;
+  special_need: string;
+  group_code: string | null;
+  arrive_date: string;
+  leave_date: string;
+  status: ParticipantStatus;
+  waitlist_seq: number | null;
+  note: string | null;
+  room_no: string | null;
+  bed_no: string | null;
+  stay_status: 'held' | 'confirmed' | null;
+  stay_id: string | null;
+  checkin_date: string | null;
+  checkin_kind: 'on_time' | 'late' | null;
+  checkout_date: string | null;
+  checkout_early: boolean | null;
+}
+
+export interface ImportRowResult {
+  row_no: number;
+  dharma_name: string;
+  ordination_no: string;
+  arrive_date: string;
+  leave_date: string;
+  status: 'accepted' | 'waitlisted' | 'duplicate' | 'conflict' | 'invalid';
+  message: string;
+  participant_id: string | null;
+  waitlist_seq: number | null;
+}
+
+export interface ImportBatch {
+  id: string;
+  file_name: string | null;
+  total_rows: number;
+  accepted_count: number;
+  waitlisted_count: number;
+  duplicate_count: number;
+  conflict_count: number;
+  capacity_count: number;
+  invalid_count: number;
+  imported_by: string;
+  created_at: string;
+  row_results?: ImportRowResult[];
+}
+
+export interface CeremonyEvent {
+  id: string;
+  ceremony_id: string;
+  participant_id: string | null;
+  event_type: string;
+  detail: Record<string, unknown>;
+  operator: string;
+  created_at: string;
+  dharma_name: string | null;
+}
+
+export interface CeremonyReports {
+  expected_total: number;
+  arrived_total: number;
+  on_time_count: number;
+  late_count: number;
+  no_show_count: number;
+  early_left_count: number;
+  cancelled_count: number;
+  still_waitlisted: number;
+  staying_count: number;
+  arrived_rate: number;
+  daily_occupancy: { date: string; beds_occupied: number }[];
+  bed_peak: number;
+  bed_peak_date: string | null;
+  bed_nights: number;
+  capacity: number;
+  status_dist: { status: string; n: number }[];
+}
+
+export interface AvailableCeremonyBed {
+  id: string;
+  bed_no: string;
+  room_id: string;
+  room_no: string;
+}

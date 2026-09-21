@@ -10,6 +10,8 @@ const router = createRouter({
     { path: '/permanent', name: 'permanent', component: () => import('./pages/PermanentPage.vue'), meta: { title: '常住档案' } },
     { path: '/attendance', name: 'attendance', component: () => import('./pages/AttendancePage.vue'), meta: { title: '早晚课考勤' } },
     { path: '/alerts', name: 'alerts', component: () => import('./pages/AlertsPage.vue'), meta: { title: '缺勤提醒' } },
+    { path: '/ceremonies', name: 'ceremonies', component: () => import('./pages/ceremony/CeremoniesPage.vue'), meta: { title: '大型法会' } },
+    { path: '/ceremonies/:id', name: 'ceremony-detail', component: () => import('./pages/ceremony/CeremonyDetailPage.vue'), meta: { title: '法会接待' } },
   ],
 });
 
